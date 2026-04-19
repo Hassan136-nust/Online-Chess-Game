@@ -7,7 +7,7 @@ A **real-time multiplayer chess game** with **live chat**, built using **Node.js
 ## 🌐 Live Demo
 
 🚀 Play here:
-👉 http://chess-game-657530530.ap-northeast-1.elb.amazonaws.com/
+👉 https://github.com/Hassan136-nust/Online-Chess-Game.githttps://chess-arena-game.onrender.com/
 
 > ⚠️ Note: Currently running on HTTP. Some browsers may attempt HTTPS automatically.
 
