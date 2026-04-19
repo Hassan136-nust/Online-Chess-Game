@@ -22,7 +22,15 @@ let spectators = [];
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
-app.use(express.static(path.join(__dirname, "public")));
+
+// Serve static files with correct MIME types
+app.use(express.static(path.join(__dirname, "public"), {
+    setHeaders: (res, path) => {
+        if (path.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript');
+        }
+    }
+}));
 
 app.get("/health", (req, res) => {
     res.status(200).json({ status: "healthy" });
