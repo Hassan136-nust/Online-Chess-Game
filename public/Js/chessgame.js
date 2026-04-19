@@ -18,6 +18,7 @@ let playerRole = null;
 let playerName = null;
 let players = { white: null, black: null };
 let spectators = [];
+let touchStartSquare = null;
 
 const toSquare = (row, col) => {
     return `${String.fromCharCode(97 + col)}${8 - row}`;
@@ -69,8 +70,44 @@ const renderBoard = () => {
                     sourceSquare = null;
                 });
 
+                // Touch support for mobile
+                pieceElement.addEventListener("touchstart", (e) => {
+                    if (playerRole && playerRole === (square.color === "w" ? "white" : "black")) {
+                        touchStartSquare = { row: rowIndex, col: squareIndex };
+                        pieceElement.style.opacity = "0.6";
+                    }
+                });
+
+                pieceElement.addEventListener("touchend", () => {
+                    pieceElement.style.opacity = "1";
+                });
+
                 squareElement.appendChild(pieceElement);
             }
+
+            // Touch support for target square
+            squareElement.addEventListener("touchend", (e) => {
+                if (!touchStartSquare) return;
+
+                const targetSquare = {
+                    row: parseInt(squareElement.dataset.row),
+                    col: parseInt(squareElement.dataset.col),
+                };
+
+                const move = {
+                    from: toSquare(touchStartSquare.row, touchStartSquare.col),
+                    to: toSquare(targetSquare.row, targetSquare.col),
+                    promotion: "q",
+                };
+
+                const result = chess.move(move);
+                if (result) {
+                    renderBoard();
+                    socket.emit("move", move);
+                }
+
+                touchStartSquare = null;
+            });
 
             squareElement.addEventListener("dragover", (e) => e.preventDefault());
             squareElement.addEventListener("drop", (e) => {
