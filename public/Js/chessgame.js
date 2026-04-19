@@ -60,9 +60,10 @@ const renderBoard = () => {
                 pieceElement.innerHTML = getPieceUnicode(square);
                 pieceElement.draggable = playerRole && playerRole === (square.color === "w" ? "white" : "black");
 
-                pieceElement.addEventListener("dragstart", () => {
+                pieceElement.addEventListener("dragstart", (e) => {
                     draggedPiece = pieceElement;
                     sourceSquare = { row: rowIndex, col: squareIndex };
+                    e.dataTransfer.effectAllowed = "move";
                 });
 
                 pieceElement.addEventListener("dragend", () => {
@@ -70,46 +71,45 @@ const renderBoard = () => {
                     sourceSquare = null;
                 });
 
-                // Touch support for mobile
+                pieceElement.addEventListener("dragover", (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                });
+
+                pieceElement.addEventListener("drop", (e) => {
+                    e.preventDefault();
+                    if (!draggedPiece || !sourceSquare) return;
+
+                    const targetSquare = {
+                        row: parseInt(squareElement.dataset.row),
+                        col: parseInt(squareElement.dataset.col),
+                    };
+
+                    makeMove(sourceSquare, targetSquare);
+                    draggedPiece = null;
+                    sourceSquare = null;
+                });
+
                 pieceElement.addEventListener("touchstart", (e) => {
+                    e.preventDefault();
                     if (playerRole && playerRole === (square.color === "w" ? "white" : "black")) {
                         touchStartSquare = { row: rowIndex, col: squareIndex };
-                        pieceElement.style.opacity = "0.6";
+                        pieceElement.classList.add("selected");
                     }
                 });
 
                 pieceElement.addEventListener("touchend", () => {
-                    pieceElement.style.opacity = "1";
+                    pieceElement.classList.remove("selected");
                 });
 
                 squareElement.appendChild(pieceElement);
             }
 
-            // Touch support for target square
-            squareElement.addEventListener("touchend", (e) => {
-                if (!touchStartSquare) return;
-
-                const targetSquare = {
-                    row: parseInt(squareElement.dataset.row),
-                    col: parseInt(squareElement.dataset.col),
-                };
-
-                const move = {
-                    from: toSquare(touchStartSquare.row, touchStartSquare.col),
-                    to: toSquare(targetSquare.row, targetSquare.col),
-                    promotion: "q",
-                };
-
-                const result = chess.move(move);
-                if (result) {
-                    renderBoard();
-                    socket.emit("move", move);
-                }
-
-                touchStartSquare = null;
+            squareElement.addEventListener("dragover", (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
             });
 
-            squareElement.addEventListener("dragover", (e) => e.preventDefault());
             squareElement.addEventListener("drop", (e) => {
                 e.preventDefault();
                 if (!draggedPiece || !sourceSquare) return;
@@ -119,22 +119,41 @@ const renderBoard = () => {
                     col: parseInt(squareElement.dataset.col),
                 };
 
-                const move = {
-                    from: toSquare(sourceSquare.row, sourceSquare.col),
-                    to: toSquare(targetSquare.row, targetSquare.col),
-                    promotion: "q",
+                makeMove(sourceSquare, targetSquare);
+                draggedPiece = null;
+                sourceSquare = null;
+            });
+
+            squareElement.addEventListener("touchend", (e) => {
+                e.preventDefault();
+                if (!touchStartSquare) return;
+
+                const targetSquare = {
+                    row: parseInt(squareElement.dataset.row),
+                    col: parseInt(squareElement.dataset.col),
                 };
 
-                const result = chess.move(move);
-                if (result) {
-                    renderBoard();
-                    socket.emit("move", move);
-                }
+                makeMove(touchStartSquare, targetSquare);
+                touchStartSquare = null;
             });
 
             boardElement.appendChild(squareElement);
         });
     });
+};
+
+const makeMove = (source, target) => {
+    const move = {
+        from: toSquare(source.row, source.col),
+        to: toSquare(target.row, target.col),
+        promotion: "q",
+    };
+
+    const result = chess.move(move);
+    if (result) {
+        renderBoard();
+        socket.emit("move", move);
+    }
 };
 
 const getPieceUnicode = (piece) => {
@@ -225,6 +244,10 @@ socket.on("gameDraw", (data) => {
     msg.innerHTML = `<div style="color: #e74c3c; font-weight: 600;">⚠️ ${data.message}</div>`;
     chatMessages.appendChild(msg);
     chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    setTimeout(() => {
+        chatMessages.innerHTML = "";
+    }, 1000);
 });
 
 socket.on("chatMessage", (message) => {
